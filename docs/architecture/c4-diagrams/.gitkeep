@@ -1,0 +1,8 @@
+# C4 Model Diagrams
+
+This directory will contain C4 architecture diagrams:
+- level-1-system-context.md
+- level-2-containers.md
+- level-3-components.md
+- level-4-code.md
+

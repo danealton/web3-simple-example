@@ -1,0 +1,7 @@
+# Sequence Diagrams
+
+This directory will contain sequence diagrams:
+- connect-wallet-flow.md
+- send-transaction-flow.md
+- account-change-flow.md
+- network-change-flow.md

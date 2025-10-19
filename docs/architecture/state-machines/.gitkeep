@@ -1,0 +1,5 @@
+# State Machine Diagrams
+
+This directory will contain state diagrams:
+- wallet-connection-states.md
+- transaction-states.md
