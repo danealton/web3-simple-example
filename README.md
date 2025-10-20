@@ -96,9 +96,10 @@ npm run build
 npm run dev
 
 # Проверить код
-npm run lint              # ESLint + Stylelint (всё вместе)
+npm run lint              # ESLint + Stylelint + Markdownlint (всё вместе)
 npm run lint:js           # Только ESLint
 npm run lint:css          # Только Stylelint
+npm run lint:docs         # Только Markdown
 npm run lint:fix          # Автофикс всех проблем
 
 # Собрать проект

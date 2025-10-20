@@ -11,8 +11,10 @@
     "lint:js:fix": "eslint . --fix",
     "lint:css": "stylelint \"src/**/*.css\"",
     "lint:css:fix": "stylelint \"src/**/*.css\" --fix",
-    "lint": "npm run lint:js && npm run lint:css",
-    "lint:fix": "npm run lint:js:fix && npm run lint:css:fix"
+    "lint:docs": "markdownlint 'docs/**/*.md' --ignore node_modules",
+    "lint:docs:fix": "markdownlint 'docs/**/*.md' --fix --ignore node_modules",
+    "lint": "npm run lint:js && npm run lint:css && npm run lint:docs",
+    "lint:fix": "npm run lint:js:fix && npm run lint:css:fix && npm run lint:docs:fix"
   },
   "dependencies": {
     "ethers": "^6.13.0",
@@ -32,6 +34,7 @@
     "eslint-plugin-import": "^2.31.0",
     "eslint-plugin-react-hooks": "^5.0.0",
     "eslint-plugin-react-refresh": "^0.4.7",
+    "markdownlint-cli": "^0.45.0",
     "postcss": "^8.4.38",
     "stylelint": "^16.10.0",
     "stylelint-config-standard": "^36.0.1",
