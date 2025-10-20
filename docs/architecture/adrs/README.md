@@ -34,6 +34,7 @@ ADR помогает:
 
 - [ADR-001: Использование ethers.js v6 для Web3 интеграции](./001-use-ethers-js-v6.md)
 - [ADR-002: Framework-agnostic архитектура для Web3 логики](./002-framework-agnostic-architecture.md)
+- [ADR-003: Использование Polygon и поддержка multi-chain архитектуры](./003-polygon-and-multichain-support.md)
 
 ### В обсуждении (Proposed)
 
@@ -211,7 +212,7 @@ ADR нумеруются последовательно:
 
 ---
 
-**Последнее обновление:** 2025-10-16
+**Последнее обновление:** 2025-10-20
 
 **Автор:** Architecture Team
 

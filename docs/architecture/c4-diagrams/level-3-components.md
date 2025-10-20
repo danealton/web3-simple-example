@@ -32,6 +32,7 @@ flowchart TB
 
         subgraph core[Core Layer]
             service[WalletService<br/>Бизнес-логика]
+            networkConfig[NetworkConfig<br/>Конфигурация сетей]
             utils[EthereumUtils<br/>Утилиты форматирования]
         end
 
@@ -44,7 +45,9 @@ flowchart TB
         send --> hook
 
         hook --> service
+        service --> networkConfig
         service --> utils
+        networkConfig --> utils
     end
 
     User -->|Взаимодействует| app
@@ -61,6 +64,7 @@ flowchart TB
     style hook fill:#b3e5fc,stroke:#0277bd,stroke-width:2px,color:#000
 
     style service fill:#81d4fa,stroke:#01579b,stroke-width:2px,color:#000
+    style networkConfig fill:#81d4fa,stroke:#01579b,stroke-width:2px,color:#000
     style utils fill:#81d4fa,stroke:#01579b,stroke-width:2px,color:#000
 ```
 
@@ -160,7 +164,10 @@ flowchart TB
 **Ответственность:**
 
 - Отображение информации о подключенном кошельке
-- Показ адреса, баланса, сети
+- Показ адреса, баланса, текущей сети
+- Предупреждение о дорогой сети (Ethereum)
+- Кнопка переключения на рекомендуемую сеть (Polygon)
+- Показ примерной стоимости gas
 - Кнопка отключения
 
 **Использует useWallet:**
@@ -168,7 +175,11 @@ flowchart TB
 - `account: string | null` - адрес кошелька
 - `balance: string` - баланс
 - `chainId: number | null` - ID сети
+- `chainName: string | null` - название сети ("Polygon", "Ethereum", etc.)
+- `isExpensiveNetwork: boolean` - флаг дорогой сети
+- `recommendedChainId: number` - рекомендуемая сеть (137 - Polygon)
 - `disconnectWallet()` - метод отключения
+- `switchNetwork(chainId)` - переключение на другую сеть
 
 ---
 
@@ -219,6 +230,9 @@ flowchart TB
   account: string | null
   balance: string
   chainId: number | null
+  chainName: string | null              // название сети
+  isExpensiveNetwork: boolean           // флаг дорогой сети
+  recommendedChainId: number            // рекомендуемая сеть (137)
   isConnecting: boolean
   error: Error | null
 
@@ -226,6 +240,7 @@ flowchart TB
   connectWallet: () => Promise<void>
   disconnectWallet: () => void
   sendTransaction: (to, amount) => Promise<string>
+  switchNetwork: (chainId: number) => Promise<void>  // переключение сети
 }
 ```
 
@@ -251,6 +266,8 @@ flowchart TB
 - Вся бизнес-логика работы с Web3
 - Управление состоянием кошелька
 - Взаимодействие с MetaMask через ethers.js
+- Управление multi-chain поддержкой
+- Переключение между blockchain сетями
 - Уведомление подписчиков об изменениях
 
 **Основные операции:**
@@ -259,7 +276,10 @@ flowchart TB
 - Отключение от кошелька
 - Отправка транзакций
 - Получение баланса
-- Обработка событий MetaMask
+- Обработка событий MetaMask (accountsChanged, chainChanged)
+- Переключение сети (switchNetwork)
+- Проверка поддержки сети (isNetworkSupported)
+- Автоматическое предложение Polygon при подключении
 
 **Характеристики:**
 
@@ -267,6 +287,7 @@ flowchart TB
 - Модуль-синглтон (единый экземпляр для всего приложения)
 - Observer паттерн для уведомлений
 - Полная инкапсуляция работы с ethers.js
+- Использует NetworkConfig для получения информации о сетях
 
 ---
 
@@ -278,19 +299,69 @@ flowchart TB
 
 - Утилиты для работы с Ethereum данными
 - Форматирование и валидация
+- Вспомогательные функции для multi-chain
 
 **Функции:**
 
-- `formatAddress(address)` - сокращение адреса для UI
-- `formatBalance(wei)` - форматирование баланса в ETH
-- `getChainName(chainId)` - название сети по ID
+- `formatAddress(address)` - сокращение адреса для UI (0x742d...bEb)
+- `formatBalance(wei, symbol)` - форматирование баланса (1.234 ETH / MATIC)
+- `getNetworkName(chainId)` - название сети по ID (Polygon, Ethereum, Base, Amoy, Sepolia)
 - `isValidAddress(address)` - проверка валидности адреса
+- `isExpensiveNetwork(chainId)` - проверка дорогой сети (Ethereum = true)
+- `getGasCostEstimate(chainId)` - примерная стоимость gas ("~$0.001", "~$5-15")
+- `getNetworkCurrency(chainId)` - токен сети (MATIC, ETH)
 
 **Характеристики:**
 
 - Pure functions (без side effects)
 - Stateless
 - Легко тестируются
+- EVM-совместимые сети используют одинаковые форматы адресов
+
+#### NetworkConfig
+
+**Тип:** Configuration Module
+
+**Паттерн:** Configuration / Registry
+
+**Ответственность:**
+
+- Хранение конфигурации поддерживаемых blockchain сетей
+- Предоставление информации о сетях по chainId
+- Определение рекомендуемой сети
+
+**Методы:**
+
+- `getNetwork(chainId)` - получить конфигурацию сети
+- `isSupported(chainId)` - проверка поддержки сети
+- `getRecommended()` - получить рекомендуемую сеть (Polygon)
+- `getAllNetworks()` - список всех поддерживаемых сетей
+
+**Структура данных:**
+
+```typescript
+interface NetworkInfo {
+  chainId: number
+  name: string
+  currency: string              // 'MATIC', 'ETH'
+  rpcUrl: string
+  blockExplorer: string
+  gasPrice: string              // '~$0.001-0.01'
+  recommended?: boolean         // true для Polygon
+}
+```
+
+**Поддерживаемые сети:**
+
+- Production: Polygon (137), Base (8453), Ethereum (1)
+- Testnet: Amoy (80002), Sepolia (11155111)
+
+**Характеристики:**
+
+- Stateless (только чтение конфигурации)
+- Pure TypeScript
+- Централизованная конфигурация всех сетей
+- См. [ADR-003](../adrs/003-polygon-and-multichain-support.md) для обоснования выбора
 
 ---
 
@@ -334,6 +405,28 @@ React Components (re-render)
 
 ---
 
+### WalletService → NetworkConfig
+
+WalletService использует NetworkConfig для:
+
+- Проверки поддержки текущей сети пользователя
+- Получения информации о сетях для переключения
+- Определения рекомендуемой сети (Polygon)
+- Получения RPC URL и других параметров сети
+
+**Пример логики:**
+
+```typescript
+const chainId = await this.getChainId()
+if (!NetworkConfig.isSupported(chainId)) {
+  // Предложить переключиться на Polygon
+  const recommended = NetworkConfig.getRecommended()
+  await this.switchNetwork(recommended.chainId)
+}
+```
+
+---
+
 ### WalletService → EthereumUtils
 
 WalletService использует утилиты для форматирования данных перед уведомлением подписчиков.
@@ -341,8 +434,21 @@ WalletService использует утилиты для форматирова�
 **Примеры:**
 
 - Форматирование адреса: `0x742d...bEb`
-- Форматирование баланса: `1.234 ETH`
-- Получение названия сети: `Sepolia Testnet`
+- Форматирование баланса: `1.234 MATIC` или `1.234 ETH` (в зависимости от сети)
+- Получение названия сети: `Polygon`, `Sepolia Testnet`
+- Проверка дорогой сети: `isExpensiveNetwork(1) === true` (Ethereum)
+- Оценка стоимости: `getGasCostEstimate(137) === "~$0.001-0.01"` (Polygon)
+
+---
+
+### NetworkConfig → EthereumUtils
+
+NetworkConfig использует EthereumUtils для форматирования и валидации данных конфигурации.
+
+**Примеры:**
+
+- Валидация RPC URLs
+- Форматирование названий сетей
 
 ---
 
@@ -448,6 +554,79 @@ ethers.js → MetaMask
 
 ---
 
+## Multi-chain Architecture
+
+### Network Selection Strategy
+
+**Рекомендуемая сеть:** Polygon (Chain ID: 137)
+
+**Логика при подключении:**
+
+```text
+User connects wallet
+    ↓
+WalletService.connect()
+    ↓
+Получить chainId из MetaMask
+    ↓
+NetworkConfig.isSupported(chainId)?
+    ├─ Yes → Continue
+    └─ No → Предложить Polygon
+        ↓
+        UI показывает предупреждение
+        ↓
+        User подтверждает
+        ↓
+        WalletService.switchNetwork(137)
+```
+
+### Network Switching
+
+**User-initiated switching:**
+
+UI компонент (WalletInfo) предоставляет кнопку для переключения сети:
+
+```text
+User clicks "Switch to Polygon"
+    ↓
+WalletInfo.onClick()
+    ↓
+useWallet.switchNetwork(137)
+    ↓
+WalletService.switchNetwork(137)
+    ↓
+NetworkConfig.getNetwork(137)
+    ↓
+window.ethereum.request({
+  method: 'wallet_switchEthereumChain',
+  params: [{ chainId: '0x89' }]  // 0x89 = 137 (Polygon)
+})
+    ↓
+MetaMask показывает popup
+    ↓
+User подтверждает
+    ↓
+chainChanged event → WalletService
+    ↓
+WalletService.notify() → useWallet
+    ↓
+UI updates с новой сетью
+```
+
+### Network Indicators
+
+**UI показывает:**
+
+- ✅ Текущая сеть (название + chainId)
+- ✅ Токен сети (MATIC / ETH)
+- ⚠️ Предупреждение, если Ethereum Mainnet (дорогая сеть)
+- 💡 Предложение переключиться на Polygon
+- 💰 Примерная стоимость gas для текущей сети
+
+**Архитектурное решение:** См. [ADR-003: Polygon и multi-chain поддержка](../adrs/003-polygon-and-multichain-support.md)
+
+---
+
 ## Data Flow (Поток данных)
 
 ### Connect Wallet Flow (упрощенно)
@@ -486,6 +665,30 @@ WalletService.notify(newState)
 useWallet.setState(newState)
     ↓
 All subscribed components re-render
+```
+
+### Network Change Flow
+
+```text
+MetaMask (chainChanged event)
+    ↓
+WalletService.handleChainChanged(newChainId)
+    ↓
+NetworkConfig.getNetwork(newChainId)
+    ↓
+EthereumUtils.getNetworkName(newChainId)
+    ↓
+EthereumUtils.isExpensiveNetwork(newChainId)
+    ↓
+Update balance (new network = new balance)
+    ↓
+WalletService.notify(newState)
+    ↓
+useWallet.setState(newState)
+    ↓
+WalletInfo re-renders
+    ↓
+Shows new network + warning (if expensive)
 ```
 
 ---
@@ -549,6 +752,8 @@ interface WalletState {
   account: string | null
   balance: string
   chainId: number | null
+  chainName: string | null          // "Polygon", "Ethereum", etc.
+  isExpensiveNetwork: boolean       // флаг дорогой сети
   isConnecting: boolean
   error: Error | null
 }
@@ -559,6 +764,8 @@ interface WalletState {
 - В WalletService (internal state)
 - В useWallet (React state)
 - В UI Components (props)
+
+**Примечание:** `chainName` и `isExpensiveNetwork` вычисляются в WalletService на основе `chainId` с использованием NetworkConfig и EthereumUtils
 
 ---
 
@@ -596,6 +803,7 @@ interface TransactionData {
 **Core Layer:**
 
 - ✅ WalletService
+- ✅ NetworkConfig
 - ✅ EthereumUtils
 - ✅ TypeScript Types/Interfaces
 
@@ -694,13 +902,19 @@ WalletService использует Observer pattern вместо внешнег�
 - 📄 [Wallet Connection States](../state-machines/wallet-connection-states.md)
 - 📄 [Transaction States](../state-machines/transaction-states.md)
 
+**Архитектурные решения (ADR):**
+
+- 📄 [ADR-001: Использование ethers.js v6](../adrs/001-use-ethers-js-v6.md)
+- 📄 [ADR-002: Framework-agnostic архитектура](../adrs/002-framework-agnostic-architecture.md)
+- 📄 [ADR-003: Polygon и multi-chain архитектура](../adrs/003-polygon-and-multichain-support.md)
+
 **Назад:**
 
 - 📄 [Architecture README](../README.md)
 
 ---
 
-**Последнее обновление:** 2025-10-19
+**Последнее обновление:** 2025-10-20
 
 **Автор:** Architecture Team
 

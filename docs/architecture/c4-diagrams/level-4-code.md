@@ -25,6 +25,8 @@ classDiagram
         +connect() Promise~void~
         +disconnect() void
         +sendTransaction(to, amount) Promise~string~
+        +switchNetwork(chainId) Promise~void~
+        +isNetworkSupported(chainId) boolean
         +subscribe(listener) UnsubscribeFn
         +getState() WalletState
 
@@ -38,6 +40,8 @@ classDiagram
         +account: string | null
         +balance: string
         +chainId: number | null
+        +chainName: string | null
+        +isExpensiveNetwork: boolean
         +isConnecting: boolean
         +error: Error | null
     }
@@ -52,12 +56,34 @@ classDiagram
         +() void
     }
 
+    class NetworkConfig {
+        <<module>>
+        +getNetwork(chainId) NetworkInfo | null
+        +isSupported(chainId) boolean
+        +getRecommended() NetworkInfo
+        +getAllNetworks() NetworkInfo[]
+    }
+
+    class NetworkInfo {
+        <<interface>>
+        +chainId: number
+        +name: string
+        +currency: string
+        +rpcUrl: string
+        +blockExplorer: string
+        +gasPrice: string
+        +recommended: boolean
+    }
+
     class EthereumUtils {
         <<module>>
         +formatAddress(address) string
-        +formatBalance(wei) string
-        +getChainName(chainId) string
+        +formatBalance(wei, symbol) string
+        +getNetworkName(chainId) string
+        +getNetworkCurrency(chainId) string
         +isValidAddress(address) boolean
+        +isExpensiveNetwork(chainId) boolean
+        +getGasCostEstimate(chainId) string
     }
 
     class useWallet {
@@ -65,11 +91,15 @@ classDiagram
         +account: string | null
         +balance: string
         +chainId: number | null
+        +chainName: string | null
+        +isExpensiveNetwork: boolean
+        +recommendedChainId: number
         +isConnecting: boolean
         +error: Error | null
         +connectWallet() Promise~void~
         +disconnectWallet() void
         +sendTransaction(to, amount) Promise~string~
+        +switchNetwork(chainId) Promise~void~
     }
 
     class BrowserProvider {
@@ -87,18 +117,24 @@ classDiagram
 
     WalletService --> WalletState : uses
     WalletService --> StateListener : notifies
+    WalletService --> NetworkConfig : uses
     WalletService --> BrowserProvider : uses
     WalletService --> JsonRpcSigner : uses
     WalletService --> EthereumUtils : uses
+
+    NetworkConfig --> NetworkInfo : returns
+    NetworkConfig --> EthereumUtils : uses
 
     useWallet --> WalletService : delegates to
     useWallet --> WalletState : returns
 
     style WalletService fill:#81d4fa,stroke:#01579b,stroke-width:3px,color:#000
+    style NetworkConfig fill:#81d4fa,stroke:#01579b,stroke-width:2px,color:#000
     style useWallet fill:#b3e5fc,stroke:#0277bd,stroke-width:2px,color:#000
     style EthereumUtils fill:#81d4fa,stroke:#01579b,stroke-width:2px,color:#000
 
     style WalletState fill:#e3f2fd,stroke:#1976d2,stroke-width:2px,color:#000
+    style NetworkInfo fill:#e3f2fd,stroke:#1976d2,stroke-width:2px,color:#000
     style StateListener fill:#e3f2fd,stroke:#1976d2,stroke-width:2px,color:#000
     style UnsubscribeFn fill:#e3f2fd,stroke:#1976d2,stroke-width:2px,color:#000
 
@@ -150,7 +186,7 @@ classDiagram
 
 ##### sendTransaction()
 
-Отправляет ETH транзакцию.
+Отправляет транзакцию (ETH или MATIC в зависимости от сети).
 
 **Параметры:** `to: string`, `amount: string`
 
@@ -163,6 +199,50 @@ classDiagram
 - Отправляет через signer
 - Ждет подтверждения
 - Обновляет баланс
+
+##### switchNetwork()
+
+Переключает blockchain сеть в MetaMask.
+
+**Параметры:** `chainId: number`
+
+**Возвращает:** Promise&lt;void&gt;
+
+**Действия:**
+
+- Получает конфигурацию сети из NetworkConfig
+- Пытается переключиться (wallet_switchEthereumChain)
+- Если сеть не добавлена (error 4902), добавляет её (wallet_addEthereumChain)
+- Обрабатывает ошибки пользователя (отказ)
+
+**Обработка событий:**
+
+```typescript
+try {
+  await window.ethereum.request({
+    method: 'wallet_switchEthereumChain',
+    params: [{ chainId: `0x${chainId.toString(16)}` }]
+  })
+} catch (error) {
+  if (error.code === 4902) {
+    const network = NetworkConfig.getNetwork(chainId)
+    await window.ethereum.request({
+      method: 'wallet_addEthereumChain',
+      params: [{ chainId: ..., chainName: network.name, ... }]
+    })
+  }
+}
+```
+
+##### isNetworkSupported()
+
+Проверяет поддержку сети приложением.
+
+**Параметры:** `chainId: number`
+
+**Возвращает:** boolean
+
+**Реализация:** Делегирует в NetworkConfig.isSupported()
 
 ##### subscribe()
 
@@ -200,8 +280,24 @@ classDiagram
 **Действия:**
 
 - Обновляет chainId в состоянии
-- Перезагружает баланс для новой сети
+- Получает информацию о новой сети из NetworkConfig
+- Вычисляет chainName через EthereumUtils.getNetworkName()
+- Проверяет isExpensiveNetwork через EthereumUtils.isExpensiveNetwork()
+- Перезагружает баланс для новой сети (токен может быть другой)
 - Уведомляет подписчиков
+
+**Пример:**
+
+```typescript
+handleChainChanged(chainId: string) {
+  const numericChainId = parseInt(chainId, 16)
+  this.state.chainId = numericChainId
+  this.state.chainName = EthereumUtils.getNetworkName(numericChainId)
+  this.state.isExpensiveNetwork = EthereumUtils.isExpensiveNetwork(numericChainId)
+  await this.updateBalance()
+  this.notify()
+}
+```
 
 ---
 
@@ -214,8 +310,10 @@ classDiagram
 #### Свойства
 
 - `account: string | null` - адрес подключенного кошелька (null если не подключен)
-- `balance: string` - баланс в ETH (строка для точности)
-- `chainId: number | null` - ID сети (1 = Mainnet, 11155111 = Sepolia)
+- `balance: string` - баланс (строка для точности), токен зависит от сети (ETH/MATIC)
+- `chainId: number | null` - ID сети (137 = Polygon, 1 = Ethereum, 8453 = Base, 80002 = Amoy, 11155111 = Sepolia)
+- `chainName: string | null` - название сети ("Polygon", "Ethereum", "Base", "Amoy Testnet", "Sepolia Testnet")
+- `isExpensiveNetwork: boolean` - флаг дорогой сети (true для Ethereum Mainnet)
 - `isConnecting: boolean` - флаг процесса подключения
 - `error: Error | null` - ошибка (если есть)
 
@@ -265,6 +363,112 @@ type UnsubscribeFn = () => void
 
 ---
 
+### NetworkConfig
+
+**Тип:** Configuration Module
+
+**Назначение:** Централизованная конфигурация поддерживаемых blockchain сетей
+
+#### Методы
+
+##### getNetwork()
+
+Получает конфигурацию сети по chainId.
+
+**Параметры:** `chainId: number`
+
+**Возвращает:** `NetworkInfo | null`
+
+**Пример:**
+
+```typescript
+const network = NetworkConfig.getNetwork(137)
+// { chainId: 137, name: "Polygon", currency: "MATIC", ... }
+```
+
+##### isSupported()
+
+Проверяет, поддерживается ли сеть приложением.
+
+**Параметры:** `chainId: number`
+
+**Возвращает:** `boolean`
+
+**Пример:**
+
+```typescript
+NetworkConfig.isSupported(137)  // true (Polygon)
+NetworkConfig.isSupported(999)  // false (неизвестная сеть)
+```
+
+##### getRecommended()
+
+Возвращает рекомендуемую сеть (Polygon).
+
+**Возвращает:** `NetworkInfo`
+
+**Пример:**
+
+```typescript
+const recommended = NetworkConfig.getRecommended()
+// { chainId: 137, name: "Polygon", recommended: true, ... }
+```
+
+##### getAllNetworks()
+
+Возвращает список всех поддерживаемых сетей.
+
+**Возвращает:** `NetworkInfo[]`
+
+**Используется:** Для UI выбора сети
+
+**Характеристики:**
+
+- Pure module (без состояния)
+- Readonly конфигурация
+- Источник истины для поддерживаемых сетей
+
+---
+
+### NetworkInfo
+
+**Тип:** TypeScript Interface
+
+**Назначение:** Описывает конфигурацию одной blockchain сети
+
+#### Свойства
+
+- `chainId: number` - ID сети (137, 1, 8453, 80002, 11155111)
+- `name: string` - название ("Polygon", "Ethereum", "Base", etc.)
+- `currency: string` - нативный токен ("MATIC", "ETH")
+- `rpcUrl: string` - RPC endpoint для подключения
+- `blockExplorer: string` - URL block explorer (polygonscan.com, etherscan.io, etc.)
+- `gasPrice: string` - примерная стоимость gas ("~$0.001-0.01", "~$5-15")
+- `recommended: boolean` - флаг рекомендуемой сети (true только для Polygon)
+
+**Пример объекта:**
+
+```typescript
+{
+  chainId: 137,
+  name: "Polygon",
+  currency: "MATIC",
+  rpcUrl: "https://polygon-rpc.com",
+  blockExplorer: "https://polygonscan.com",
+  gasPrice: "~$0.001-0.01",
+  recommended: true
+}
+```
+
+**Используется:**
+
+- В NetworkConfig (хранилище)
+- В WalletService.switchNetwork() (параметры для wallet_addEthereumChain)
+
+**Архитектурное решение:** См. [ADR-003: Polygon и multi-chain поддержка](../adrs/003-polygon-and-multichain-support.md)
+
+---
+
 ### TransactionData
 
 **Тип:** TypeScript Interface
@@ -304,15 +508,18 @@ type UnsubscribeFn = () => void
 
 ##### formatBalance()
 
-Конвертирует Wei в ETH с форматированием.
+Конвертирует Wei в читаемый формат с токеном.
 
-**Параметры:** `wei: bigint`
+**Параметры:** `wei: bigint`, `symbol: string`
 
 **Возвращает:** string
 
-**Пример:** `1234567890123456789n` → `1.234 ETH`
+**Примеры:**
 
-##### getChainName()
+- `formatBalance(1234567890123456789n, "ETH")` → `1.234 ETH`
+- `formatBalance(1234567890123456789n, "MATIC")` → `1.234 MATIC`
+
+##### getNetworkName()
 
 Возвращает название сети по ID.
 
@@ -320,7 +527,26 @@ type UnsubscribeFn = () => void
 
 **Возвращает:** string
 
-**Примеры:** `1` → `Ethereum Mainnet`, `11155111` → `Sepolia Testnet`
+**Примеры:**
+
+- `137` → `Polygon`
+- `1` → `Ethereum`
+- `8453` → `Base`
+- `80002` → `Amoy Testnet`
+- `11155111` → `Sepolia Testnet`
+
+##### getNetworkCurrency()
+
+Возвращает нативный токен сети.
+
+**Параметры:** `chainId: number`
+
+**Возвращает:** string
+
+**Примеры:**
+
+- `getNetworkCurrency(137)` → `MATIC`
+- `getNetworkCurrency(1)` → `ETH`
 
 ##### isValidAddress()
 
@@ -331,6 +557,38 @@ type UnsubscribeFn = () => void
 **Возвращает:** boolean
 
 **Реализация:** Использует ethers.js `isAddress()`
+
+**Особенность:** EVM-совместимые адреса имеют одинаковый формат во всех сетях
+
+##### isExpensiveNetwork()
+
+Проверяет, является ли сеть дорогой (высокие gas fees).
+
+**Параметры:** `chainId: number`
+
+**Возвращает:** boolean
+
+**Примеры:**
+
+- `isExpensiveNetwork(1)` → `true` (Ethereum Mainnet)
+- `isExpensiveNetwork(137)` → `false` (Polygon)
+
+**Используется:** Для отображения предупреждений в UI
+
+##### getGasCostEstimate()
+
+Возвращает примерную стоимость gas для сети.
+
+**Параметры:** `chainId: number`
+
+**Возвращает:** string
+
+**Примеры:**
+
+- `getGasCostEstimate(137)` → `~$0.001-0.01`
+- `getGasCostEstimate(1)` → `~$5-15`
+
+**Используется:** Для информирования пользователя о стоимости
 
 **Особенности:**
 
@@ -353,6 +611,9 @@ type UnsubscribeFn = () => void
 - `account: string | null`
 - `balance: string`
 - `chainId: number | null`
+- `chainName: string | null`
+- `isExpensiveNetwork: boolean`
+- `recommendedChainId: number` (константа 137 - Polygon)
 - `isConnecting: boolean`
 - `error: Error | null`
 
@@ -361,6 +622,7 @@ type UnsubscribeFn = () => void
 - `connectWallet(): Promise<void>`
 - `disconnectWallet(): void`
 - `sendTransaction(to: string, amount: string): Promise<string>`
+- `switchNetwork(chainId: number): Promise<void>`
 
 #### Реализация
 
@@ -387,6 +649,17 @@ const connectWallet = useCallback(
   () => service.connect(),
   [service]
 )
+
+const switchNetwork = useCallback(
+  (chainId: number) => service.switchNetwork(chainId),
+  [service]
+)
+```
+
+**Вычисляемые значения:**
+
+```typescript
+const recommendedChainId = 137  // Polygon
 ```
 
 ---
@@ -451,11 +724,48 @@ this.signer = await this.provider.getSigner()
 
 ---
 
+### WalletService → NetworkConfig
+
+**Использование:** WalletService использует NetworkConfig для получения информации о сетях
+
+**Тип связи:** Dependency (конфигурация)
+
+**Примеры:**
+
+- `switchNetwork()` → `NetworkConfig.getNetwork()`
+- `isNetworkSupported()` → `NetworkConfig.isSupported()`
+- `connect()` → `NetworkConfig.getRecommended()` (для автопредложения Polygon)
+
+---
+
+### NetworkConfig → NetworkInfo
+
+**Использование:** NetworkConfig возвращает объекты типа NetworkInfo
+
+**Тип связи:** Return type
+
+---
+
+### NetworkConfig → EthereumUtils
+
+**Использование:** NetworkConfig может использовать EthereumUtils для валидации
+
+**Тип связи:** Dependency (опциональная)
+
+---
+
 ### WalletService → EthereumUtils
 
 **Использование:** WalletService вызывает utils для форматирования данных
 
 **Тип связи:** Dependency (утилиты)
+
+**Примеры:**
+
+- Форматирование баланса: `EthereumUtils.formatBalance(wei, symbol)`
+- Получение названия сети: `EthereumUtils.getNetworkName(chainId)`
+- Проверка дорогой сети: `EthereumUtils.isExpensiveNetwork(chainId)`
+- Получение токена: `EthereumUtils.getNetworkCurrency(chainId)`
 
 ---
 
@@ -682,13 +992,19 @@ test('useWallet должен подписываться на WalletService', () 
 - 📄 [Wallet Connection States](../state-machines/wallet-connection-states.md)
 - 📄 [Transaction States](../state-machines/transaction-states.md)
 
+**Архитектурные решения (ADR):**
+
+- 📄 [ADR-001: Использование ethers.js v6](../adrs/001-use-ethers-js-v6.md)
+- 📄 [ADR-002: Framework-agnostic архитектура](../adrs/002-framework-agnostic-architecture.md)
+- 📄 [ADR-003: Polygon и multi-chain архитектура](../adrs/003-polygon-and-multichain-support.md)
+
 **Назад:**
 
 - 📄 [Architecture README](../README.md)
 
 ---
 
-**Последнее обновление:** 2025-10-19
+**Последнее обновление:** 2025-10-20
 
 **Автор:** Architecture Team
 
