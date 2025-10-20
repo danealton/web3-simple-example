@@ -100,6 +100,7 @@ npm run lint              # ESLint + Stylelint + Markdownlint (всё вмест
 npm run lint:js           # Только ESLint
 npm run lint:css          # Только Stylelint
 npm run lint:docs         # Только Markdown
+npm run docs:links        # Проверка ссылок в документации
 npm run lint:fix          # Автофикс всех проблем
 
 # Собрать проект

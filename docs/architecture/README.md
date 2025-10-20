@@ -137,9 +137,9 @@ C4 Model использует 4 уровня абстракции для опи�
 
 ### 3. Account Change Flow
 
-📄 [account-change-flow.md](./sequences/account-change-flow.md)
+> **Статус:** Отложено до Фазы 3
 
-Показывает обработку смены аккаунта в MetaMask:
+Будет показывать обработку смены аккаунта в MetaMask:
 
 1. User switches account
 2. accountsChanged event
@@ -153,9 +153,9 @@ C4 Model использует 4 уровня абстракции для опи�
 
 ### 4. Network Change Flow
 
-📄 [network-change-flow.md](./sequences/network-change-flow.md)
+> **Статус:** Отложено до Фазы 3
 
-Показывает обработку смены сети в MetaMask:
+Будет показывать обработку смены сети в MetaMask:
 
 1. User switches network
 2. chainChanged event
@@ -289,7 +289,6 @@ code --install-extension bierner.markdown-mermaid
 
 - [C4 Model Documentation](https://c4model.com/)
 - [The C4 model for visualising software architecture](https://c4model.com/)
-- [Documentation as Code](../../yclients/docs/DOCUMENTATION_AS_CODE.md)
 
 ---
 

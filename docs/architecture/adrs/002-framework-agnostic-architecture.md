@@ -195,7 +195,6 @@ const WalletConnect = () => {
 
 **References:**
 
-- [Framework-agnostic TypeScript - Blog Post](https://kentcdodds.com/blog/framework-agnostic)
 - [Observer Pattern](https://refactoring.guru/design-patterns/observer)
 - [Adapter Pattern](https://refactoring.guru/design-patterns/adapter)
 - [SOLID Principles](https://en.wikipedia.org/wiki/SOLID)

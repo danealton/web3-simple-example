@@ -83,13 +83,13 @@
 
 **Related ADRs:**
 
-- [ADR-XXX: Related decision](./XXX-related-decision.md)
+- ADR-XXX: Related decision (если есть связанные ADR)
 
 **References:**
 
-- [External documentation](https://example.com)
-- [Blog post](https://example.com)
-- [GitHub issue](https://github.com/org/repo/issues/123)
+- External documentation (если есть)
+- Blog post (если есть)
+- GitHub issue (если есть)
 
 ---
 

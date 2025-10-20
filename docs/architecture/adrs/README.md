@@ -34,9 +34,6 @@ ADR помогает:
 
 - [ADR-001: Использование ethers.js v6 для Web3 интеграции](./001-use-ethers-js-v6.md)
 - [ADR-002: Framework-agnostic архитектура для Web3 логики](./002-framework-agnostic-architecture.md)
-- [ADR-003: Использование Vite как build tool](./003-use-vite-as-build-tool.md)
-- [ADR-004: Использование TypeScript strict mode](./004-use-typescript-strict-mode.md)
-- [ADR-005: Tailwind CSS для стилизации](./005-use-tailwind-css.md)
 
 ### В обсуждении (Proposed)
 
