@@ -8,6 +8,9 @@
     },
     {
       "pattern": "^file://"
+    },
+    {
+      "pattern": "badge\\.svg$"
     }
   ],
   "timeout": "10s",

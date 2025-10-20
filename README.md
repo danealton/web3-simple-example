@@ -1,5 +1,7 @@
 # Web3 Simple Example - Документация
 
+![CI](https://github.com/danealton/web3-simple-example/actions/workflows/ci.yml/badge.svg)
+
 ## 📋 Содержание
 
 1. [Обзор проекта](#-обзор-проекта)
@@ -102,6 +104,10 @@ npm run lint:css          # Только Stylelint
 npm run lint:docs         # Только Markdown
 npm run docs:links        # Проверка ссылок в документации
 npm run lint:fix          # Автофикс всех проблем
+
+# Проверить всё (как в CI)
+npm run ci                # Полная проверка: lint + typecheck + docs:links + build
+npm run ci:quick          # Быстрая проверка: lint + typecheck + build (без links)
 
 # Собрать проект
 npm run build

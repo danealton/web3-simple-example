@@ -13,9 +13,11 @@
     "lint:css:fix": "stylelint \"src/**/*.css\" --fix",
     "lint:docs": "markdownlint 'docs/**/*.md' --ignore node_modules",
     "lint:docs:fix": "markdownlint 'docs/**/*.md' --fix --ignore node_modules",
-    "docs:links": "find docs -name '*.md' -not -path '*/node_modules/*' -exec markdown-link-check --config .markdown-link-check.json {} \\;",
+    "docs:links": "markdown-link-check README.md docs/**/*.md --config .markdown-link-check.json",
     "lint": "npm run lint:js && npm run lint:css && npm run lint:docs",
-    "lint:fix": "npm run lint:js:fix && npm run lint:css:fix && npm run lint:docs:fix"
+    "lint:fix": "npm run lint:js:fix && npm run lint:css:fix && npm run lint:docs:fix",
+    "ci": "npm run lint:js && npm run lint:css && npx tsc --noEmit && npm run lint:docs && npm run docs:links && npm run build",
+    "ci:quick": "npm run lint && npx tsc --noEmit && npm run build"
   },
   "dependencies": {
     "ethers": "^6.13.0",

@@ -704,7 +704,6 @@ docs/architecture/
 
 - [C4_DIAGRAMS.md](./C4_DIAGRAMS_2025-10-14_draft.md) - оригинальный документ с текстовыми диаграммами (архив)
 - [PLAN.md](../PLAN.md) - общий план проекта
-- [DOCUMENTATION_AS_CODE.md](/Users/dan/workspace/yclients/docs/DOCUMENTATION_AS_CODE.md) - справочник по Docs-as-Code
 
 ---
 
