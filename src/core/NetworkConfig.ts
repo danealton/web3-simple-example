@@ -5,62 +5,89 @@
 import type { NetworkInfo, NetworksConfig } from '../types';
 
 /**
- * @description Конфигурация всех поддерживаемых blockchain сетей
- * @remarks
- * Production сети: Polygon, Base, Ethereum
- * Testnet сети: Amoy, Sepolia
- *
- * Поле gasPrice содержит описательную оценку стоимости газа.
- * Для получения актуальной цены используйте RPC вызов eth_gasPrice.
+ * @description Идентификаторы поддерживаемых blockchain сетей
+ * @remarks Используйте эти константы вместо магических чисел
  */
-const NETWORKS: NetworksConfig = {
+export const ChainId = {
   // Production Networks
-  137: {
-    chainId: 137,
+  ETHEREUM: 1,
+  POLYGON: 137,
+  BASE: 8453,
+  // Testnet Networks
+  AMOY: 80002,
+  SEPOLIA: 11155111,
+} as const;
+
+/**
+ * @description Конфигурация production blockchain сетей
+ * @remarks Polygon, Base, Ethereum
+ */
+const MAINNET_NETWORKS: NetworksConfig = {
+  [ChainId.POLYGON]: {
+    chainId: ChainId.POLYGON,
     name: 'Polygon',
     currency: 'MATIC',
     rpcUrl: 'https://polygon-rpc.com',
     blockExplorer: 'https://polygonscan.com',
-    gasPrice: 'low',
+    gasCostLevel: 'low',
     recommended: true,
   },
-  8453: {
-    chainId: 8453,
+  [ChainId.BASE]: {
+    chainId: ChainId.BASE,
     name: 'Base',
     currency: 'ETH',
     rpcUrl: 'https://mainnet.base.org',
     blockExplorer: 'https://basescan.org',
-    gasPrice: 'low',
+    gasCostLevel: 'low',
     recommended: false,
   },
-  1: {
-    chainId: 1,
+  [ChainId.ETHEREUM]: {
+    chainId: ChainId.ETHEREUM,
     name: 'Ethereum',
     currency: 'ETH',
     rpcUrl: 'https://cloudflare-eth.com',
     blockExplorer: 'https://etherscan.io',
-    gasPrice: 'high',
+    gasCostLevel: 'high',
     recommended: false,
   },
-  // Testnet Networks
-  80002: {
-    chainId: 80002,
+};
+
+/**
+ * @description Конфигурация testnet blockchain сетей
+ * @remarks Amoy, Sepolia
+ */
+const TESTNET_NETWORKS: NetworksConfig = {
+  [ChainId.AMOY]: {
+    chainId: ChainId.AMOY,
     name: 'Amoy',
     currency: 'MATIC',
     rpcUrl: 'https://rpc-amoy.polygon.technology',
     blockExplorer: 'https://amoy.polygonscan.com',
-    gasPrice: 'free',
+    gasCostLevel: 'free',
     recommended: true,
   },
-  11155111: {
-    chainId: 11155111,
+  [ChainId.SEPOLIA]: {
+    chainId: ChainId.SEPOLIA,
     name: 'Sepolia',
     currency: 'ETH',
     rpcUrl: 'https://rpc.sepolia.org',
     blockExplorer: 'https://sepolia.etherscan.io',
-    gasPrice: 'free',
+    gasCostLevel: 'free',
     recommended: false,
   },
+};
+
+/**
+ * @description Все поддерживаемые blockchain сети
+ * @remarks
+ * Объединение production и testnet сетей.
+ *
+ * Поле gasCostLevel содержит описательную оценку стоимости газа.
+ * Для получения актуальной цены используйте RPC вызов eth_gasPrice.
+ */
+const NETWORKS: NetworksConfig = {
+  ...MAINNET_NETWORKS,
+  ...TESTNET_NETWORKS,
 };
 
 /**
@@ -69,7 +96,7 @@ const NETWORKS: NetworksConfig = {
  * @returns Информация о сети или null если сеть не поддерживается
  * @example
  * ```typescript
- * const network = NetworkConfig.getNetwork(137);
+ * const network = NetworkConfig.getNetwork(ChainId.POLYGON);
  * console.log(network?.name); // "Polygon"
  * ```
  */
@@ -91,8 +118,7 @@ function isSupported(chainId: number): boolean {
  * @returns Информация о рекомендуемой сети (Polygon для production)
  */
 function getRecommended(): NetworkInfo {
-  // Возвращаем Polygon как рекомендуемую сеть (chainId: 137)
-  return NETWORKS[137];
+  return NETWORKS[ChainId.POLYGON];
 }
 
 /**
@@ -108,7 +134,7 @@ function getAllNetworks(): NetworkInfo[] {
  * @returns Массив production сетей (Polygon, Base, Ethereum)
  */
 function getProductionNetworks(): NetworkInfo[] {
-  return [NETWORKS[137], NETWORKS[8453], NETWORKS[1]];
+  return Object.values(MAINNET_NETWORKS);
 }
 
 /**
@@ -116,7 +142,7 @@ function getProductionNetworks(): NetworkInfo[] {
  * @returns Массив testnet сетей (Amoy, Sepolia)
  */
 function getTestnetNetworks(): NetworkInfo[] {
-  return [NETWORKS[80002], NETWORKS[11155111]];
+  return Object.values(TESTNET_NETWORKS);
 }
 
 /**

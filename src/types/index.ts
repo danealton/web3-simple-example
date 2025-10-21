@@ -3,6 +3,7 @@
  */
 
 export type {
+  GasCostLevel,
   NetworkInfo,
   NetworksConfig,
 } from './network';

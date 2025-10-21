@@ -3,6 +3,11 @@
  */
 
 /**
+ * @description Уровень стоимости газа в сети
+ */
+export type GasCostLevel = 'free' | 'low' | 'medium' | 'high';
+
+/**
  * @description Информация о blockchain сети
  * @example
  * ```typescript
@@ -12,7 +17,7 @@
  *   currency: "MATIC",
  *   rpcUrl: "https://polygon-rpc.com",
  *   blockExplorer: "https://polygonscan.com",
- *   gasPrice: "low",
+ *   gasCostLevel: "low",
  *   recommended: true
  * };
  * ```
@@ -35,11 +40,10 @@ export interface NetworkInfo {
    */
   blockExplorer: string
   /**
-   * Описательная категория стоимости газа
-   * (например, "low", "high", "free")
-   * Для актуальных цен используйте RPC вызов eth_gasPrice
+   * Описательная категория стоимости газа в сети
+   * @remarks Для получения актуальных цен используйте RPC вызов eth_gasPrice
    */
-  gasPrice: string
+  gasCostLevel: GasCostLevel
   /** Флаг рекомендуемой сети для использования */
   recommended?: boolean
 }
