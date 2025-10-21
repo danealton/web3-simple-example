@@ -4,8 +4,6 @@
 
 /**
  * @description Состояние подключения кошелька
- * @interface WalletState
- * @since 1.0.0
  * @example
  * ```typescript
  * const walletState: WalletState = {
@@ -44,42 +42,17 @@ export interface WalletState {
 
 /**
  * @description Callback функция для обновлений состояния кошелька
- * @callback StateListener
  * @param state - Текущее состояние кошелька
- * @since 1.0.0
- * @example
- * ```typescript
- * const listener: StateListener = (state) => {
- *   console.log('Состояние кошелька обновлено:', state);
- * };
- * ```
  */
 export type StateListener = (state: WalletState) => void;
 
 /**
  * @description Функция для отписки от обновлений состояния кошелька
- * @callback UnsubscribeFn
- * @since 1.0.0
- * @example
- * ```typescript
- * const unsubscribe: UnsubscribeFn = () => {
- *   // Логика очистки
- * };
- * ```
  */
 export type UnsubscribeFn = () => void;
 
 /**
  * @description Данные для отправки транзакции
- * @interface TransactionData
- * @since 1.0.0
- * @example
- * ```typescript
- * const txData: TransactionData = {
- *   to: "0x742d35Cc6634C0532925a3b8D4C9db96C4b4d8b6",
- *   amount: "0.1"
- * };
- * ```
  */
 export interface TransactionData {
   /** Адрес кошелька получателя */

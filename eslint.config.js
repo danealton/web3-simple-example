@@ -64,6 +64,7 @@ export default tseslint.config(
       '@stylistic/linebreak-style': ['error', 'unix'],
       '@stylistic/max-len': ['error', {
         code: 80,
+        ignoreComments: true,
         ignoreUrls: true,
         ignoreStrings: true,
         ignoreTemplateLiterals: true,
